@@ -2,6 +2,8 @@
 
 电子表格筛选工具是一个桌面端Web应用，用于批量处理多个电子表格文件。用户可以选择文件夹下的多个CSV/XLSX文件，通过设置筛选条件（单列或多列）过滤数据，并将筛选结果合并到一个统一的表格中，同时保留原始表格的列名信息。
 
+在线链接：https://sumo166.github.io/Product-Overview/
+
 ## 2. Core Features
 
 ### 2.1 User Roles
