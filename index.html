@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>电子表格筛选工具</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background-color: #f5f6f8;
+      min-height: 100vh;
+      font-size: 13px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      padding: 12px 20px;
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    }
+
+    .header-content {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-content h1 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .header-content p {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .main-content {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 16px;
+      height: calc(100vh - 70px);
+    }
+
+    @media (max-width: 1100px) {
+      .main-content {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+    }
+
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      padding: 14px;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel-title svg {
+      width: 14px;
+      height: 14px;
+      color: #3b82f6;
+    }
+
+    /* 文件上传区域 */
+    .upload-area {
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-area:hover {
+      border-color: #3b82f6;
+      background-color: #eff6ff;
+    }
+
+    .upload-area.dragover {
+      border-color: #3b82f6;
+      background-color: #eff6ff;
+    }
+
+    .upload-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .upload-btn:hover {
+      background: #2563eb;
+    }
+
+    .upload-btn.secondary {
+      background: #6b7280;
+    }
+
+    .upload-btn.secondary:hover {
+      background: #4b5563;
+    }
+
+    .upload-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .upload-text {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 8px;
+    }
+
+    #fileInput, #folderInput {
+      display: none;
+    }
+
+    /* 文件列表 */
+    .file-list {
+      margin-top: 10px;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    .file-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .file-header span {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .clear-all-btn {
+      font-size: 11px;
+      color: #dc2626;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .clear-all-btn:hover {
+      color: #b91c1c;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      background: #f9fafb;
+      border-radius: 6px;
+      margin-bottom: 4px;
+    }
+
+    .file-item .file-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-item .file-info svg {
+      width: 14px;
+      height: 14px;
+      color: #6b7280;
+      flex-shrink: 0;
+    }
+
+    .file-item .file-name {
+      font-size: 12px;
+      color: #374151;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-item .file-count {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-left: 4px;
+    }
+
+    .file-item .remove-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 4px;
+      color: #9ca3af;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .file-item .remove-btn:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .file-item .remove-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* 列选择 */
+    .column-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .column-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: #f3f4f6;
+      border-radius: 14px;
+      font-size: 12px;
+      color: #4b5563;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid transparent;
+    }
+
+    .column-tag:hover {
+      background: #e5e7eb;
+    }
+
+    .column-tag.selected {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-color: #93c5fd;
+    }
+
+    .column-tag svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .column-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .column-actions button {
+      font-size: 12px;
+      color: #3b82f6;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .column-actions button:hover {
+      color: #2563eb;
+    }
+
+    .column-actions .clear-btn {
+      color: #6b7280;
+    }
+
+    .column-actions .clear-btn:hover {
+      color: #374151;
+    }
+
+    /* 筛选条件 */
+    .condition-list {
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .condition-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px;
+      background: #f9fafb;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .condition-item select,
+    .condition-item input {
+      padding: 4px 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 12px;
+      background: white;
+    }
+
+    .condition-item select:focus,
+    .condition-item input:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .condition-item .column-select {
+      min-width: 100px;
+    }
+
+    .condition-item .operator-select {
+      min-width: 80px;
+    }
+
+    .condition-item .value-input {
+      flex: 1;
+      min-width: 80px;
+    }
+
+    .condition-item .logic-select {
+      min-width: 60px;
+    }
+
+    .condition-item .remove-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      color: #9ca3af;
+      transition: all 0.2s;
+    }
+
+    .condition-item .remove-btn:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .add-condition-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .add-condition-btn:hover {
+      background: #2563eb;
+    }
+
+    .add-condition-btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .add-condition-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .no-condition-hint {
+      color: #9ca3af;
+      text-align: center;
+      padding: 12px;
+      font-size: 12px;
+    }
+
+    /* 结果表格 */
+    .result-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+
+    .result-count {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .result-count strong {
+      color: #3b82f6;
+    }
+
+    .export-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .export-btn:hover {
+      background: #059669;
+    }
+
+    .export-btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .export-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .result-table-wrapper {
+      flex: 1;
+      overflow: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: #9ca3af;
+    }
+
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 10px;
+      opacity: 0.4;
+    }
+
+    .empty-state p {
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .empty-state .hint {
+      font-size: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      padding: 8px 12px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      border-bottom: 2px solid #3b82f6;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+    }
+
+    td {
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #4b5563;
+      border-bottom: 1px solid #f3f4f6;
+      white-space: nowrap;
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    tr:hover td {
+      background: #f9fafb;
+    }
+
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+
+    tr:nth-child(even):hover td {
+      background: #f3f4f6;
+    }
+
+    .error-message {
+      padding: 8px 12px;
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      color: #dc2626;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .loading-spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
+        <rect x="3" y="3" width="18" height="18" rx="2" stroke-linejoin="round"></rect>
+        <path d="M3 9h18M9 21V9"></path>
+      </svg>
+      <div>
+        <h1>电子表格筛选工具</h1>
+        <p>批量处理多个电子表格文件</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <div class="left-panel">
+      <!-- 文件上传 -->
+      <div class="panel">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          选择文件
+        </div>
+        
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        
+        <div 
+          id="uploadArea" 
+          class="upload-area"
+          ondragover="event.preventDefault(); this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="event.preventDefault(); this.classList.remove('dragover'); handleDrop(event)"
+        >
+          <div class="upload-buttons">
+            <button class="upload-btn" onclick="document.getElementById('folderInput').click()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              选择文件夹
+            </button>
+            <button class="upload-btn secondary" onclick="document.getElementById('fileInput').click()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              选择文件
+            </button>
+          </div>
+          <p class="upload-text">或拖拽文件/文件夹到此处 | 支持 CSV、XLSX、XLS 格式</p>
+        </div>
+        
+        <input type="file" id="fileInput" multiple accept=".csv,.xlsx,.xls" onchange="handleFileSelect(this)">
+        <input type="file" id="folderInput" webkitdirectory directory multiple accept=".csv,.xlsx,.xls" onchange="handleFolderSelect(this)">
+        
+        <div id="fileList" class="file-list" style="display: none;"></div>
+      </div>
+
+      <!-- 列选择 -->
+      <div class="panel">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 11 12 14 22 4"></polyline>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+          </svg>
+          选择列
+        </div>
+        
+        <div id="columnTags" class="column-tags">
+          <span style="color: #9ca3af;">请先上传文件</span>
+        </div>
+        
+        <div id="columnActions" class="column-actions" style="display: none;">
+          <button onclick="selectAllColumns()">全选</button>
+          <button class="clear-btn" onclick="clearSelectedColumns()">清空</button>
+        </div>
+      </div>
+
+      <!-- 筛选条件 -->
+      <div class="panel">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 22 15 13 21 2 10 2 3 22 3"></polygon>
+          </svg>
+          筛选条件
+        </div>
+        
+        <div id="conditionList" class="condition-list">
+          <div class="no-condition-hint">
+            点击下方按钮添加筛选条件<br>
+            <span style="font-size: 11px; color: #b0b0b0;">不设置条件将显示所有数据</span>
+          </div>
+        </div>
+        
+        <button 
+          id="addConditionBtn" 
+          class="add-condition-btn" 
+          onclick="addCondition()"
+          disabled
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          添加条件
+        </button>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <!-- 结果表格 -->
+      <div class="panel result-panel">
+        <div class="result-header">
+          <div class="panel-title" style="margin-bottom: 0;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" stroke-linejoin="round"></rect>
+              <path d="M3 9h18M9 21V9"></path>
+            </svg>
+            筛选结果
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div id="resultCount" class="result-count">共 <strong>0</strong> 条记录</div>
+            <button id="exportBtn" class="export-btn" onclick="exportResults()" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              导出CSV
+            </button>
+          </div>
+        </div>
+        
+        <div id="resultTable">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <p>暂无数据</p>
+            <p class="hint">请上传文件并设置筛选条件</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <script>
+    let files = [];
+    let selectedColumns = [];
+    let conditions = [];
+
+    const OPERATORS = [
+      { value: 'equals', label: '等于' },
+      { value: 'contains', label: '包含' },
+      { value: 'notContains', label: '不包含' },
+      { value: 'greaterThan', label: '大于' },
+      { value: 'lessThan', label: '小于' },
+      { value: 'startsWith', label: '开头是' },
+      { value: 'endsWith', label: '结尾是' },
+    ];
+
+    function handleFileSelect(input) {
+      const newFiles = Array.from(input.files);
+      if (newFiles.length > 0) {
+        processFiles(newFiles);
+      }
+      input.value = '';
+    }
+
+    function handleFolderSelect(input) {
+      const selectedFiles = Array.from(input.files);
+      if (selectedFiles.length > 0) {
+        processFiles(selectedFiles);
+      }
+      input.value = '';
+    }
+
+    function handleDrop(event) {
+      const droppedFiles = Array.from(event.dataTransfer.files).filter(file => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        return ext === 'csv' || ext === 'xlsx' || ext === 'xls';
+      });
+      if (droppedFiles.length > 0) {
+        processFiles(droppedFiles);
+      }
+    }
+
+    async function processFiles(newFiles) {
+      showLoading(true);
+      hideError();
+
+      try {
+        const parsedFiles = await Promise.all(
+          newFiles.map(async file => {
+            const ext = file.name.split('.').pop()?.toLowerCase();
+            if (ext === 'csv') {
+              return await parseCSV(file);
+            } else if (ext === 'xlsx' || ext === 'xls') {
+              return await parseExcel(file);
+            }
+            throw new Error(`不支持的文件格式: ${file.name}`);
+          })
+        );
+
+        files = [...files, ...parsedFiles];
+        updateFileList();
+        updateColumnTags();
+        updateConditionUI();
+        applyFilters();
+
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function parseCSV(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const text = e.target.result;
+            if (!text || text.trim() === '') {
+              resolve({
+                fileName: file.webkitRelativePath ? file.name : file.name,
+                filePath: file.webkitRelativePath || file.name,
+                headers: [],
+                rows: []
+              });
+              return;
+            }
+            const lines = text.split('\n').filter(line => line.trim());
+            if (lines.length === 0) {
+              resolve({
+                fileName: file.webkitRelativePath ? file.name : file.name,
+                filePath: file.webkitRelativePath || file.name,
+                headers: [],
+                rows: []
+              });
+              return;
+            }
+            const headers = lines[0].split(',').map(h => h.trim());
+            const rows = lines.slice(1).map(line => {
+              const values = parseCSVLine(line);
+              const row = {};
+              headers.forEach((header, index) => {
+                row[header] = values[index] || '';
+              });
+              return row;
+            });
+            resolve({
+              fileName: file.webkitRelativePath ? file.name : file.name,
+              filePath: file.webkitRelativePath || file.name,
+              headers,
+              rows
+            });
+          } catch (err) {
+            reject(new Error(`解析CSV文件失败: ${file.name} - ${err.message}`));
+          }
+        };
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsText(file);
+      });
+    }
+
+    function parseCSVLine(line) {
+      const values = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"' && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          values.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current);
+      return values;
+    }
+
+    function parseExcel(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = e.target.result;
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            if (!workbook || workbook.SheetNames.length === 0) {
+              resolve({
+                fileName: file.webkitRelativePath ? file.name : file.name,
+                filePath: file.webkitRelativePath || file.name,
+                headers: [],
+                rows: []
+              });
+              return;
+            }
+            
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            
+            if (!worksheet) {
+              resolve({
+                fileName: file.webkitRelativePath ? file.name : file.name,
+                filePath: file.webkitRelativePath || file.name,
+                headers: [],
+                rows: []
+              });
+              return;
+            }
+            
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            const headerRow = XLSX.utils.sheet_to_json(worksheet, { header: 1 })[0] || [];
+            
+            resolve({
+              fileName: file.webkitRelativePath ? file.name : file.name,
+              filePath: file.webkitRelativePath || file.name,
+              headers: headerRow.filter(h => typeof h === 'string' && h.trim() !== ''),
+              rows: jsonData
+            });
+          } catch (err) {
+            reject(new Error(`解析Excel文件失败: ${file.name} - ${err.message}`));
+          }
+        };
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function updateFileList() {
+      const fileList = document.getElementById('fileList');
+      
+      if (files.length === 0) {
+        fileList.style.display = 'none';
+        return;
+      }
+
+      fileList.style.display = 'block';
+      fileList.innerHTML = `
+        <div class="file-header">
+          <span>已选择 ${files.length} 个文件</span>
+          <span class="clear-all-btn" onclick="clearAllFiles()">清空</span>
+        </div>
+        ${files.map(file => `
+          <div class="file-item">
+            <div class="file-info" title="${file.filePath}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              <span class="file-name">${file.fileName}</span>
+              <span class="file-count">(${file.rows.length})</span>
+            </div>
+            <button class="remove-btn" onclick="removeFile('${file.fileName}')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        `).join('')}
+      `;
+    }
+
+    function removeFile(fileName) {
+      files = files.filter(f => f.fileName !== fileName);
+      updateFileList();
+      updateColumnTags();
+      updateConditionUI();
+      applyFilters();
+    }
+
+    function clearAllFiles() {
+      files = [];
+      selectedColumns = [];
+      conditions = [];
+      updateFileList();
+      updateColumnTags();
+      updateConditionUI();
+      applyFilters();
+    }
+
+    function getAllHeaders() {
+      const headerSet = new Set();
+      files.forEach(file => {
+        file.headers.forEach(header => headerSet.add(header));
+      });
+      return Array.from(headerSet);
+    }
+
+    function updateColumnTags() {
+      const columnTags = document.getElementById('columnTags');
+      const columnActions = document.getElementById('columnActions');
+      const allHeaders = getAllHeaders();
+
+      if (allHeaders.length === 0) {
+        columnTags.innerHTML = '<span style="color: #9ca3af;">请先上传文件</span>';
+        columnActions.style.display = 'none';
+        return;
+      }
+
+      columnActions.style.display = 'flex';
+      columnTags.innerHTML = allHeaders.map(header => `
+        <span 
+          class="column-tag ${selectedColumns.includes(header) ? 'selected' : ''}"
+          onclick="toggleColumn('${header}')"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            ${selectedColumns.includes(header) ? 
+              '<polyline points="20 6 9 17 4 12"></polyline>' : 
+              '<rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"></rect>'
+            }
+          </svg>
+          ${header}
+        </span>
+      `).join('');
+    }
+
+    function toggleColumn(column) {
+      if (selectedColumns.includes(column)) {
+        selectedColumns = selectedColumns.filter(c => c !== column);
+      } else {
+        selectedColumns = [...selectedColumns, column];
+      }
+      updateColumnTags();
+      applyFilters();
+    }
+
+    function selectAllColumns() {
+      selectedColumns = getAllHeaders();
+      updateColumnTags();
+      applyFilters();
+    }
+
+    function clearSelectedColumns() {
+      selectedColumns = [];
+      updateColumnTags();
+      applyFilters();
+    }
+
+    function updateConditionUI() {
+      const conditionList = document.getElementById('conditionList');
+      const addBtn = document.getElementById('addConditionBtn');
+      const allHeaders = getAllHeaders();
+
+      if (allHeaders.length === 0) {
+        conditionList.innerHTML = '<div class="no-condition-hint">请先上传文件</div>';
+        addBtn.disabled = true;
+        return;
+      }
+
+      addBtn.disabled = false;
+
+      if (conditions.length === 0) {
+        conditionList.innerHTML = '<div class="no-condition-hint">点击下方按钮添加筛选条件<br><span style="font-size: 11px; color: #b0b0b0;">不设置条件将显示所有数据</span></div>';
+        return;
+      }
+
+      conditionList.innerHTML = conditions.map((condition, index) => `
+        <div class="condition-item">
+          ${index > 0 ? `
+            <select 
+              class="logic-select" 
+              onchange="updateCondition('${condition.id}', { logic: this.value })"
+            >
+              <option value="AND" ${condition.logic === 'AND' ? 'selected' : ''}>AND</option>
+              <option value="OR" ${condition.logic === 'OR' ? 'selected' : ''}>OR</option>
+            </select>
+          ` : ''}
+          <select 
+            class="column-select" 
+            onchange="updateCondition('${condition.id}', { columnName: this.value })"
+          >
+            ${allHeaders.map(h => `<option value="${h}" ${condition.columnName === h ? 'selected' : ''}>${h}</option>`).join('')}
+          </select>
+          <select 
+            class="operator-select" 
+            onchange="updateCondition('${condition.id}', { operator: this.value })"
+          >
+            ${OPERATORS.map(o => `<option value="${o.value}" ${condition.operator === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
+          </select>
+          <input 
+            class="value-input" 
+            type="text" 
+            value="${condition.value}" 
+            placeholder="筛选值"
+            oninput="updateCondition('${condition.id}', { value: this.value })"
+          />
+          <button class="remove-btn" onclick="removeCondition('${condition.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function addCondition() {
+      const allHeaders = getAllHeaders();
+      const newCondition = {
+        id: 'condition-' + Date.now(),
+        columnName: allHeaders[0] || '',
+        operator: 'contains',
+        value: '',
+        logic: conditions.length > 0 ? 'AND' : 'AND'
+      };
+      conditions = [...conditions, newCondition];
+      updateConditionUI();
+      applyFilters();
+    }
+
+    function updateCondition(id, updates) {
+      conditions = conditions.map(c => c.id === id ? { ...c, ...updates } : c);
+      applyFilters();
+    }
+
+    function removeCondition(id) {
+      conditions = conditions.filter(c => c.id !== id);
+      updateConditionUI();
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const results = [];
+
+      files.forEach(file => {
+        file.rows.forEach(row => {
+          if (matchesConditions(row)) {
+            results.push({
+              sourceFile: file.fileName,
+              rowData: row
+            });
+          }
+        });
+      });
+
+      displayResults(results);
+    }
+
+    function matchesConditions(row) {
+      if (conditions.length === 0) return true;
+
+      return conditions.reduce((result, condition, index) => {
+        const matches = compareValues(row[condition.columnName], condition.operator, condition.value);
+
+        if (index === 0) {
+          return matches;
+        }
+
+        if (condition.logic === 'AND') {
+          return result && matches;
+        } else {
+          return result || matches;
+        }
+      }, true);
+    }
+
+    function compareValues(value, operator, filterValue) {
+      const stringValue = String(value ?? '').toLowerCase();
+      const stringFilterValue = filterValue.toLowerCase();
+
+      switch (operator) {
+        case 'equals':
+          return stringValue === stringFilterValue;
+        case 'contains':
+          return stringValue.includes(stringFilterValue);
+        case 'notContains':
+          return !stringValue.includes(stringFilterValue);
+        case 'greaterThan':
+          return Number(value) > Number(filterValue);
+        case 'lessThan':
+          return Number(value) < Number(filterValue);
+        case 'startsWith':
+          return stringValue.startsWith(stringFilterValue);
+        case 'endsWith':
+          return stringValue.endsWith(stringFilterValue);
+        default:
+          return true;
+      }
+    }
+
+    function displayResults(results) {
+      const resultTable = document.getElementById('resultTable');
+      const resultCount = document.getElementById('resultCount');
+      const exportBtn = document.getElementById('exportBtn');
+
+      resultCount.innerHTML = `共 <strong>${results.length}</strong> 条记录`;
+      exportBtn.disabled = results.length === 0;
+
+      if (results.length === 0) {
+        resultTable.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <p>暂无数据</p>
+            <p class="hint">请上传文件并设置筛选条件</p>
+          </div>
+        `;
+        return;
+      }
+
+      const allHeaders = getAllHeaders();
+      const displayHeaders = selectedColumns.length > 0 ? selectedColumns : allHeaders;
+      const headers = ['来源文件', ...displayHeaders];
+
+      resultTable.innerHTML = `
+        <div class="result-table-wrapper">
+          <table>
+            <thead>
+              <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+            </thead>
+            <tbody>
+              ${results.map((result, index) => `
+                <tr>
+                  ${headers.map(h => {
+                    const value = h === '来源文件' ? result.sourceFile : result.rowData[h] ?? '';
+                    return `<td title="${String(value)}">${escapeHtml(String(value))}</td>`;
+                  }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function exportResults() {
+      const results = [];
+      files.forEach(file => {
+        file.rows.forEach(row => {
+          if (matchesConditions(row)) {
+            results.push({
+              sourceFile: file.fileName,
+              rowData: row
+            });
+          }
+        });
+      });
+
+      if (results.length === 0) return;
+
+      const allHeaders = getAllHeaders();
+      const displayHeaders = selectedColumns.length > 0 ? selectedColumns : allHeaders;
+      const headers = ['来源文件', ...displayHeaders];
+
+      const csvRows = [headers.join(',')];
+      
+      results.forEach(result => {
+        const rowValues = headers.map(h => {
+          const value = h === '来源文件' ? result.sourceFile : result.rowData[h] ?? '';
+          const stringValue = String(value);
+          return stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n') 
+            ? `"${stringValue.replace(/"/g, '""')}"`
+            : stringValue;
+        });
+        csvRows.push(rowValues.join(','));
+      });
+
+      const csv = '\uFEFF' + csvRows.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `筛选结果_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function showError(message) {
+      const errorEl = document.getElementById('errorMessage');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('errorMessage').style.display = 'none';
+    }
+
+    function showLoading(show) {
+      document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+    }
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>
